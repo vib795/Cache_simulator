@@ -1,4 +1,6 @@
-import sys, math, time
+import sys
+import math 
+import time
 
 simulator = []
 cacheLines = 0
@@ -36,7 +38,8 @@ def cacheCreate(cacheSize, cacheLineSize, ways):
         waysNum = waysNum + 1
 
 if (len(sys.argv) < 4):
-    print("Correct usage: sh run_sim.sh [traceFile] [cacheSizeBytes] [cacheLineSizeBytes] [numberOfWays]")
+    print("Incorrect input command. Please use the following syntax to key in the commands:")
+    print("\t" + "\"sh run_sim.sh <traceFile> <sizeOfCacheBytes> <cacheLineSizeBytes> <numberOfWays>\"")
     sys.exit()
 
 cacheSize = int(sys.argv[2])
