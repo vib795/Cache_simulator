@@ -2,135 +2,145 @@ import sys
 import math 
 import time
 
-simulator = []
-cacheLines = 0
-numSets = 0
-linesPerSet = 0
-hitCount = 0
-missCount = 0
+sim = []
+linesInCache = 0
+numSlots = 0
+linesPerSlot = 0
+hit = 0
+miss = 0
 
-def cacheCreate(cacheSize, cacheLineSize, ways):
-    lineCount = 0
-    setNum = 0
-    waysNum = 0
+#Cache creation method
+def cacheCreate(sizeOfCache, lineSize, Mways):
+    lC = 0
+    slotNum = 0
+    ways = 0
 
-    global cacheLines
-    global numSets
-    global linesPerSet
+    global numSlots
+    global linesPerSlot
+    global linesInCache
+    
+    #set total number of lines in cache
+    linesInCache = sizeOfCache//lineSize
 
-    cacheLines = cacheSize//cacheLineSize
-    numSets = cacheLines//ways
-    linesPerSet = cacheLines//numSets
+    #set number of slots
+    numSlots = linesInCache//Mways
 
-    for i in range(cacheLines):
-        simulator.append([0,0,0,0,0,-1])
+    #set number of lines per slot
+    linesPerSlot = linesInCache//numSlots
 
-    for i in range(cacheLines):
-        if (lineCount == linesPerSet):
-            lineCount = 0
-            setNum = setNum + 1
-            waysNum = 0
-        simulator[i][0] = setNum
-        simulator[i][1] = waysNum
-        simulator[i][2] = "-1"
-        simulator[i][4] = "-1"
-        lineCount = lineCount + 1
-        waysNum = waysNum + 1
+    for i in range(linesInCache):
+        sim.append([0,0,0,0,0,-1])
 
+    for i in range(linesInCache):
+        if (lC == linesPerSlot):
+            lC = 0
+            slotNum = slotNum + 1
+            ways = 0
+        sim[i][0] = slotNum
+        sim[i][1] = ways
+        sim[i][2] = "-1"
+        sim[i][4] = "-1"
+        lC = lC + 1
+        ways = ways + 1
+
+#check for required number of parameters and throw error message if the input is wrong
 if (len(sys.argv) < 4):
     print("Incorrect input command. Please use the following syntax to key in the commands:")
-    print("\t" + "\"sh run_sim.sh <traceFile> <sizeOfCacheBytes> <cacheLineSizeBytes> <numberOfWays>\"")
+    print("\t" + "\"sh run_sim.sh <traceFile> <sizeOfCacheBytes> <lineSizeBytes> <numberOfWays>\"")
     sys.exit()
 
-cacheSize = int(sys.argv[2])
-cacheLineSize = int(sys.argv[3])
-ways = int(sys.argv[4])
+#format input to int
+sizeOfCache = int(sys.argv[2])
+lineSize = int(sys.argv[3])
+Mways = int(sys.argv[4])
 
-cacheCreate(cacheSize, cacheLineSize, ways)
+cacheCreate(sizeOfCache, lineSize, Mways)
 
+#read file
 file = open(sys.argv[1], "r")
 while True:
-    readLine = file.readline()
-    if readLine == "" or readLine == "#eof":
+    line = file.readline()
+    if line == "" or line == "#eof":
         break
     
-    accessFields = readLine.split()
-    if (len(accessFields) != 3):
+    fields = line.split()
+    if (len(fields) != 3):
         continue
 
-    hitCount = hitCount + 1
-    addr = int(accessFields[2], 16)
-    memOffet = addr & (cacheLineSize - 1)
-    memSetIndex = addr >> int(math.log(cacheLineSize, 2)) & (numSets - 1)
-    memTag = addr >> (int(math.log(numSets, 2)) + int(math.log(cacheLineSize, 2)))
+    hit = hit + 1
+    addr = int(fields[2], 16)
+    offset = addr & (lineSize - 1)
+    setIndex = addr >> int(math.log(lineSize, 2)) & (numSlots - 1)
+    tag = addr >> (int(math.log(numSlots, 2)) + int(math.log(lineSize, 2)))
 
-    hitFlag = 0
-    fullSetCounter = 0;
-    if(accessFields[1] == "R"):
-        startingRow = linesPerSet * int(memSetIndex)
-        for i in range(startingRow, startingRow + linesPerSet):
-            if (simulator[i][2] == memTag):
-                hitFlag = 1
-                simulator[i][5] = time.time()
+    flag = 0
+    fsCounter = 0;
+    if(fields[1] == "R"):
+        fRow = linesPerSlot * int(setIndex)
+        for i in range(fRow, fRow + linesPerSlot):
+            if (sim[i][2] == tag):
+                flag = 1
+                sim[i][5] = time.time()
                 break
 
-        fullFlag = 1
-        oldestTime = 1000000000000000000000000  #use a large time value by default for LRU comparison
+        fFalg = 1
+        oldestTime = 100000000000000000000  #set to a high value for LRU algorithm to work 
         oldestRow = -1
 
-        if (hitFlag == 0):
-            missCount = missCount + 1
-            for i in range(startingRow, startingRow + linesPerSet):
-                if (simulator[i][3] == 0):
-                    fullFlag = 0
+        if (flag == 0):
+            miss = miss + 1
+            for i in range(fRow, fRow + linesPerSlot):
+                if (sim[i][3] == 0):
+                    fFalg = 0
                     break
-                if (simulator[i][5] < oldestTime):
-                    oldestTime = simulator[i][5]
+                if (sim[i][5] < oldestTime):
+                    oldestTime = sim[i][5]
                     oldestRow = i
-            if (fullFlag == 0):
-                simulator[i][2] = memTag
-                simulator[i][4] = "data"
-                simulator[i][3] = 1
-                simulator[i][5] = time.time()
+            if (fFalg == 0):
+                sim[i][2] = tag
+                sim[i][4] = "data"
+                sim[i][3] = 1
+                sim[i][5] = time.time()
             else:
-                simulator[oldestRow][2] = memTag
-                simulator[oldestRow][4] = "data"
-                simulator[oldestRow][3] = 1
-                simulator[oldestRow][5] = time.time()
+                sim[oldestRow][2] = tag
+                sim[oldestRow][4] = "data"
+                sim[oldestRow][3] = 1
+                sim[oldestRow][5] = time.time()
 	
-    elif(accessFields[1] == "W"):
-        startingRow = linesPerSet * int(memSetIndex)
-        for i in range(startingRow, startingRow + linesPerSet):
-            if (simulator[i][2] == memTag):
-                simulator[i][2] = memTag
-                simulator[i][4] = "dataUpdated"
-                simulator[i][3] = 1
-                simulator[i][5] = time.time()
-                hitFlag = 1
+    elif(fields[1] == "W"):
+        fRow = linesPerSlot * int(setIndex)
+        for i in range(fRow, fRow + linesPerSlot):
+            if (sim[i][2] == tag):
+                sim[i][2] = tag
+                sim[i][4] = "dataUpdated"
+                sim[i][3] = 1
+                sim[i][5] = time.time()
+                flag = 1
                 break
 
-        fullFlag = 1
-        oldestTime = 1000000000000000000000000
+        fFalg = 1
+        oldestTime = 100000000000000000000
         oldestRow = -1
 
-        if (hitFlag == 0):
-            missCount = missCount + 1
-            for i in range(startingRow, startingRow + linesPerSet):
-                if (simulator[i][3] == 0):
-                    fullFlag = 0
+        if (flag == 0):
+            miss = miss + 1
+            for i in range(fRow, fRow + linesPerSlot):
+                if (sim[i][3] == 0):
+                    fFalg = 0
                     break
-                if (simulator[i][5] < oldestTime):
-                    oldestTime = simulator[i][5]
+                if (sim[i][5] < oldestTime):
+                    oldestTime = sim[i][5]
                     oldestRow = i
-            if (fullFlag == 0):
-                simulator[i][2] = memTag
-                simulator[i][4] = "data"
-                simulator[i][3] = 1
-                simulator[i][5] = time.time()
+            if (fFalg == 0):
+                sim[i][2] = tag
+                sim[i][4] = "data"
+                sim[i][3] = 1
+                sim[i][5] = time.time()
             else:
-                simulator[oldestRow][2] = memTag
-                simulator[oldestRow][4] = "data"
-                simulator[oldestRow][3] = 1
-                simulator[oldestRow][5] = time.time()
-missRate = (missCount/hitCount) * 100
+                sim[oldestRow][2] = tag
+                sim[oldestRow][4] = "data"
+                sim[oldestRow][3] = 1
+                sim[oldestRow][5] = time.time()
+missRate = (miss/hit) * 100
 print ("Cache miss rate: {:0.2f}%".format(missRate, 3))
+file.close()
